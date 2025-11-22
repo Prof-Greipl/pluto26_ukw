@@ -16,6 +16,7 @@
         android:layout_height="wrap_content"
         android:hint="E-Mail (will never be shared)"
         android:ems="10"
+        android:minHeight="48dp"
         android:inputType="textEmailAddress" />
 
     <EditText
@@ -23,6 +24,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Password"
+        android:minHeight="48dp"
         android:ems="10"
         android:inputType="textPassword" />
 
