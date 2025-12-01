@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.AbsListView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -15,10 +16,24 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
+import de.hawlandshut.pluto26_ukw.test.Testdata;
 
 public class MainActivity extends AppCompatActivity {
 
     private static String TAG = "xxx MainActivity";
+    CustomAdapter mAdapter;
+    RecyclerView mRecyclerView;
+    FirebaseAuth mAuth;
+
+    // TODO: Only for testing remove later
+    private static final String TEST_MAIL = "fhgreipl@gmail.com";
+    private static final String TEST_PASSWORD ="123456";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,19 +46,29 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
+
+        // Manage the adapter with testdata
+        mAdapter = new CustomAdapter();
+
+        mAdapter.mPostList = Testdata.createPostList(100);
+
+        mRecyclerView = (RecyclerView) findViewById( R.id.recycler_view);
+        mRecyclerView.setLayoutManager( new LinearLayoutManager( this ));
+        mRecyclerView.setAdapter( mAdapter );
+
+        mAuth = FirebaseAuth.getInstance();
+
         // TODO: Nur zum Test, später löschen
         Log.d(TAG, "onCreate");
 
-        // TODO: Toast zum Testen
-        Toast.makeText(getApplicationContext(), "App started", Toast.LENGTH_LONG).show();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
         // Absprung in die SignIn-Activity
-        Intent intent = new Intent(getApplication(), PostActivity.class);
-        startActivity( intent );
+        //Intent intent = new Intent(getApplication(), CreateAccountActivity.class);
+        //startActivity( intent );
         Log.d(TAG, "onStart");
     }
 
@@ -56,14 +81,14 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == R.id.menu_main_manageaccount) {
-            Toast.makeText(getApplicationContext(), "You pressed ManageAccount", Toast.LENGTH_LONG).show();
+        if (item.getItemId() == R.id.menu_test_auth) {
+            FirebaseUser user = mAuth.getCurrentUser();
+            if (user == null) {
+                Toast.makeText(getApplicationContext(), "No user signed in.", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(getApplicationContext(), "User : " + user.getEmail(), Toast.LENGTH_LONG).show();
+            }
         }
-
-        if (item.getItemId() == R.id.menu_main_help) {
-            Toast.makeText(getApplicationContext(), "You pressed Help", Toast.LENGTH_LONG).show();
-        }
-
 
         return super.onOptionsItemSelected(item);
     }
