@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         // Absprung in die SignIn-Activity
-        Intent intent = new Intent(getApplication(), ManageAccountActivity.class);
+        Intent intent = new Intent(getApplication(), CreateAccountActivity.class);
         startActivity( intent );
         Log.d(TAG, "onStart");
     }
