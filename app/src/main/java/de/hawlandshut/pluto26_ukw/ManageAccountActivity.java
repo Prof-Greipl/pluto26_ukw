@@ -13,9 +13,12 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
 public class ManageAccountActivity extends AppCompatActivity
 implements View.OnClickListener{
-
+    FirebaseAuth mAuth;
     // 3.a Declare variables for UI Views
     TextView mTextViewEmail;
     TextView mTextViewVerificationState;
@@ -52,6 +55,8 @@ implements View.OnClickListener{
         mButtonDeleteAccount.setOnClickListener( this );
         mButtonSignOut.setOnClickListener( this );
         mButtonSendVerificationMail.setOnClickListener( this );
+
+        mAuth = FirebaseAuth.getInstance();
     }
 
     @Override
@@ -78,6 +83,7 @@ implements View.OnClickListener{
     }
 
     private void doSignOut() {
-        Toast.makeText(getApplicationContext(), "You pressed SignOut", Toast.LENGTH_LONG).show();
+        mAuth.signOut();
+        finish();
     }
 }
