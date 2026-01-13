@@ -8,6 +8,7 @@ import java.util.HashMap;
 import de.hawlandshut.pluto26_ukw.model.Post;
 
 public class Testdata {
+
     public static ArrayList<Post> createPostList(int n) {
         ArrayList<Post> postList = new ArrayList<Post>();
         String body = "Lorem ipsum dolor sit amet, consectetur adipiscing elit," +

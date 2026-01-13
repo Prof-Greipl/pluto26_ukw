@@ -12,6 +12,8 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -24,7 +26,15 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.EventListener;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 
+import de.hawlandshut.pluto26_ukw.model.Post;
 import de.hawlandshut.pluto26_ukw.test.Testdata;
 
 public class MainActivity extends AppCompatActivity {
@@ -33,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
     CustomAdapter mAdapter;
     RecyclerView mRecyclerView;
     FirebaseAuth mAuth;
+    ListenerRegistration mListenerRegistration;
 
     // TODO: Only for testing remove later
     private static final String TEST_MAIL = "fhgreipl@gmail.com";
@@ -52,16 +63,13 @@ public class MainActivity extends AppCompatActivity {
         // Manage the adapter with testdata
         mAdapter = new CustomAdapter();
 
-        mAdapter.mPostList = Testdata.createPostList(3);
-
         mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mRecyclerView.setAdapter(mAdapter);
 
         mAuth = FirebaseAuth.getInstance();
 
-        // TODO: Nur zum Test, später löschen
-        Log.d(TAG, "onCreate");
+
 
     }
 
@@ -71,8 +79,19 @@ public class MainActivity extends AppCompatActivity {
         FirebaseUser  user =  mAuth.getCurrentUser();
         if (user == null){
             // Kein User angemeldet
+            mAdapter.mPostList.clear();
+            if (mListenerRegistration != null){
+                mListenerRegistration.remove();
+                mListenerRegistration = null;
+            }
             Intent intent = new Intent(getApplication(), SignInActivity.class);
             startActivity(  intent );
+        }
+        else {
+            // Lister erzeugen - wenn er nicht bereits existiert...
+            if (mListenerRegistration == null)
+                mListenerRegistration = createMyEventListener();
+
         }
 
         // Absprung in die SignIn-Activity
@@ -80,6 +99,7 @@ public class MainActivity extends AppCompatActivity {
         //startActivity( intent );
         Log.d(TAG, "onStart");
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -104,167 +124,34 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void AuthSignOut() {
-        FirebaseUser user;
-        user = mAuth.getCurrentUser();
-        if (user == null) {
-            Toast.makeText(getApplicationContext(),
-                    "No user signed in. Please sign in first",
-                    Toast.LENGTH_LONG).show();
-        } else {
-            mAuth.signOut();
-            Toast.makeText(getApplicationContext(),
-                    "Your are signed out.",
-                    Toast.LENGTH_LONG).show();
-        }
+    ListenerRegistration createMyEventListener () {
+        // Step 1: Define the query to firebase
+        Query query = FirebaseFirestore.getInstance().collection("posts")
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(5);
+        // Step 2: Define, how you process an update from the listener
+        EventListener<QuerySnapshot> listener = new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@Nullable QuerySnapshot snapshot,
+                                @Nullable FirebaseFirestoreException error) {
+                Log.d(TAG, "Data received. Count = " + snapshot.size());
+                mAdapter.mPostList.clear();
+                for (QueryDocumentSnapshot doc : snapshot) {
+                    if (doc.get("uid") != null) {
+                        Log.d(TAG, "Post " + doc.getId() + " - " + doc.get("body"));
 
-    }
-
-    private void AuthSignInWithEmailAndPassword(String email, String password) {
-        mAuth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
-                            Log.d(TAG, "signInUserWithEmail:success");
-                            FirebaseUser user = mAuth.getCurrentUser();
-                            Toast.makeText(getApplicationContext(),
-                                            "User signed in",
-                                            Toast.LENGTH_LONG)
-                                    .show();
-
-                        } else {
-                            // If sign in fails, display a message to the user.
-                            Toast.makeText(getApplicationContext(),
-                                            "User signIn failed." + task.getException().getMessage(),
-                                            Toast.LENGTH_LONG)
-                                    .show();
-                        }
-                        // ...
+                        // Verarbeiten des Posts
+                        Post addedPost = Post.fromDocument(doc);
+                        // Post in die anzuzeigende Liste aufnehmen
+                        mAdapter.mPostList.add(addedPost);
                     }
-                });
-    }
-
-    private void UserSendMailVerification() {
-        FirebaseUser user = mAuth.getCurrentUser();
-        if (user == null) {
-            Toast.makeText(getApplicationContext(), "No user authentiated.",
-                    Toast.LENGTH_SHORT).show();
-            return;
-        }
-        user.sendEmailVerification()
-                .addOnCompleteListener(
-                        this,
-                        new OnCompleteListener<Void>() {
-                            @Override
-                            public void onComplete(@NonNull Task<Void> task) {
-                                if (task.isSuccessful()) {
-                                    //Erfolgsfall
-                                    Toast.makeText(getApplicationContext(),
-                                                    "Ver. Mail sent.",
-                                                    Toast.LENGTH_LONG)
-                                            .show();
-                                } else {
-                                    // Fehlerfall
-                                    Toast.makeText(getApplicationContext(),
-                                                    "Sending Verif. Mail Failed: "
-                                                            + task.getException().getMessage(),
-                                                    Toast.LENGTH_LONG)
-                                            .show();
-                                }
-                            }
-                        }
-                );
-    }
-
-    private void AuthSendPasswordResetEmail(String email) {
-        mAuth.sendPasswordResetEmail(email)
-                .addOnCompleteListener(new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        if (task.isSuccessful()) {
-                            Toast.makeText(getApplicationContext(),
-                                            "We sent you a link to your e-mail account.",
-                                            Toast.LENGTH_LONG)
-                                    .show();
-                        } else {
-                            Toast.makeText(getApplicationContext(),
-                                            "Could not send mail. Correct e-mail?.",
-                                            Toast.LENGTH_LONG)
-                                    .show();
-                        }
-                    }
-                });
-    }
-
-    private void UserDelete() {
-        FirebaseUser user = mAuth.getCurrentUser();
-        if (user == null) {
-            Toast.makeText(getApplicationContext(),
-                            "No user signed in.",
-                            Toast.LENGTH_LONG)
-                    .show();
-            return;
-        }
-        user.delete()
-                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        if (task.isSuccessful()) {
-                            Toast.makeText(getApplicationContext(),
-                                            "Account was deleted.",
-                                            Toast.LENGTH_LONG)
-                                    .show();
-
-                        } else {
-                            Toast.makeText(getApplicationContext(),
-                                            "Deletion failed : " + task.getException().getMessage(),
-                                            Toast.LENGTH_LONG)
-                                    .show();
-                        }
-                    }
-                });
-    }
-
-    private void AuthCreateUser(String testMail, String testPassword) {
-        mAuth.createUserWithEmailAndPassword(testMail, testPassword)
-                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if (task.isSuccessful()) {
-                            Toast.makeText(getApplicationContext(),
-                                    "User created",
-                                    Toast.LENGTH_LONG).show();
-                        } else {
-                            Toast.makeText(getApplicationContext(),
-                                    "Failure: " + task.getException().getMessage(),
-                                    Toast.LENGTH_LONG).show();
-                        }
-                    }
-                });
-    }
-
-    private void UserTestAuthStatus() {
-        FirebaseUser user = mAuth.getCurrentUser();
-        if (user == null) {
-            Toast.makeText(getApplicationContext(), "No user signed in.", Toast.LENGTH_LONG).show();
-        } else {
-            String msg = " User : " + user.getEmail() + " (" + user.isEmailVerified() + ")";
-            Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(TAG, "onResume");
+                }
+                mAdapter.notifyDataSetChanged();
+            }
+        };
+        // Step 3 : return the query with the listener added.
+        return query.addSnapshotListener(listener);
     }
 
 
-    @Override
-    protected void onStop() {
-        super.onStop();
-        Log.d(TAG, "onStop");
-    }
 }
